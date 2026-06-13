@@ -1,0 +1,39 @@
+{% extends "shared/base.html" %}
+{% block title %}Редактировать курс — МедТрекер{% endblock %}
+{% block content %}
+<div class="page-wrapper">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <a href="{{ url_for('patient.course_detail', course_id=course.id) }}"
+       class="btn btn-secondary btn-sm"><i class="ti ti-arrow-left"></i> Назад</a>
+    <span style="font-size:15px;font-weight:600">Редактировать курс</span>
+  </div>
+  <form method="POST" action="{{ url_for('patient.edit_course', course_id=course.id) }}">
+    <div class="card">
+      <div class="card-title">Основные данные</div>
+      <div class="form-group">
+        <label class="form-label">Название курса</label>
+        <input class="form-control" type="text" name="title" value="{{ course.title }}" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата начала</label>
+          <input class="form-control" type="date" name="start_date"
+                 value="{{ course.start_date.isoformat() }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дата окончания</label>
+          <input class="form-control" type="date" name="end_date"
+                 value="{{ course.end_date.isoformat() }}" required>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;padding:11px">
+        Сохранить изменения
+      </button>
+      <a href="{{ url_for('patient.course_detail', course_id=course.id) }}"
+         class="btn btn-secondary" style="padding:11px 16px">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

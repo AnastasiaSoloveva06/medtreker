@@ -1,0 +1,57 @@
+{% extends "shared/base.html" %}
+{% block title %}Статистика — МедТрекер{% endblock %}
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-title" style="margin-bottom:16px">Статистика по пациентам</div>
+  {% if stats %}
+    {% for s in stats %}
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">{{ s.course.title }}</div>
+          <div class="row-sub">
+            {% if s.course.patient %}{{ s.course.patient.full_name }}{% endif %} ·
+            {{ s.course.start_date.strftime('%d.%m.%Y') }} – {{ s.course.end_date.strftime('%d.%m.%Y') }}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div>
+            <div class="prog-bar" style="width:120px">
+              <div class="prog-fill {% if s.pct >= 75 %}ok{% elif s.pct >= 50 %}warn{% else %}bad{% endif %}"
+                   style="width:{{ s.pct }}%"></div>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-secondary);text-align:right;margin-top:3px">{{ s.pct }}%</div>
+          </div>
+          <span class="tag tag-{% if s.pct >= 75 %}ok{% elif s.pct >= 50 %}warn{% else %}bad{% endif %}">
+            {% if s.pct >= 75 %}Хорошо{% elif s.pct >= 50 %}Внимание{% else %}Критично{% endif %}
+          </span>
+          <a href="{{ url_for('doctor.export_pdf', course_id=s.course.id) }}"
+             class="btn btn-secondary btn-sm"><i class="ti ti-file-type-pdf"></i> PDF</a>
+        </div>
+      </div>
+      <div class="metrics-row" style="margin-top:8px">
+        <div class="metric">
+          <div class="metric-label">Принято</div>
+          <div class="metric-value ok" style="font-size:20px">{{ s.taken }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Пропущено</div>
+          <div class="metric-value bad" style="font-size:20px">{{ s.missed }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Всего</div>
+          <div class="metric-value" style="font-size:20px">{{ s.total }}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card">
+      <div class="empty-state">
+        <i class="ti ti-chart-bar"></i>
+        <p>Пока нет данных для статистики</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

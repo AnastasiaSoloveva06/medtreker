@@ -1,0 +1,81 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ course.title }} — МедТрекер{% endblock %}
+{% block content %}
+<div class="page-wrapper">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <a href="{{ url_for('patient.dashboard') }}" class="btn btn-secondary btn-sm">
+      <i class="ti ti-arrow-left"></i> Назад
+    </a>
+    <span style="font-size:15px;font-weight:600">{{ course.title }}</span>
+  </div>
+
+  {% if course.doctor_id and course.doctor_comment %}
+  <div class="comment-bubble" style="margin-bottom:12px">
+    <i class="ti ti-message-circle"></i>
+    <div>
+      <div class="comment-meta">Комментарий врача
+        {% if course.doctor %} · {{ course.doctor.full_name }}{% endif %}
+      </div>
+      <div>{{ course.doctor_comment }}</div>
+    </div>
+  </div>
+  {% elif course.goal %}
+  <div style="background:var(--color-bg-secondary);border:0.5px solid var(--color-border-light);
+              border-radius:8px;padding:12px 14px;margin-bottom:12px;
+              font-size:13px;color:var(--color-text-secondary)">
+    <i class="ti ti-target" style="font-size:16px;margin-right:6px"></i>
+    <strong>Цель приёма:</strong> {{ course.goal }}
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" style="margin-bottom:0">Информация о курсе</div>
+      <div style="display:flex;gap:8px">
+        {% if not course.doctor_id %}
+        <a href="{{ url_for('patient.edit_course', course_id=course.id) }}"
+           class="btn btn-secondary btn-sm"><i class="ti ti-pencil"></i> Редактировать</a>
+        <form method="POST" action="{{ url_for('patient.delete_course', course_id=course.id) }}"
+              onsubmit="return confirm('Удалить курс?')">
+          <button class="btn btn-danger btn-sm" type="submit"><i class="ti ti-trash"></i></button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('patient.export_pdf', course_id=course.id) }}"
+           class="btn btn-secondary btn-sm"><i class="ti ti-file-type-pdf"></i> PDF</a>
+      </div>
+    </div>
+    <div class="list-row">
+      <div class="row-sub" style="font-size:13px">
+        <strong>Период:</strong> {{ course.start_date.strftime('%d.%m.%Y') }} – {{ course.end_date.strftime('%d.%m.%Y') }}
+      </div>
+      <span class="tag tag-{% if course.status == 'active' %}ok{% else %}gray{% endif %}">
+        {% if course.status == 'active' %}Активен{% else %}Завершён{% endif %}
+      </span>
+    </div>
+    {% if course.doctor %}
+    <div class="row-sub" style="padding:8px 0;font-size:13px">
+      <strong>Врач:</strong> {{ course.doctor.full_name }}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Препараты курса</div>
+    {% for item in items %}
+    <div class="list-row">
+      <div class="list-row-left">
+        <div class="icon-circle"><i class="ti ti-pill"></i></div>
+        <div>
+          <div class="row-title">{{ item.medicine.name }}</div>
+          <div class="row-sub">
+            {{ item.dosage }} {{ item.unit }} · {{ item.get_times_list()|join(', ') }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state"><p>Препаратов не добавлено</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,293 @@
+{% extends "shared/base.html" %}
+{% block title %}Добавить курс — МедТрекер{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <!-- Навигация назад -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+    <a href="{{ url_for('patient.dashboard') }}" class="btn btn-secondary btn-sm">
+      <i class="ti ti-arrow-left"></i> Назад к дашборду
+    </a>
+    <span style="font-size:14px;font-weight:600">Добавить курс лечения</span>
+  </div>
+
+  <!-- Информационный блок -->
+  <div class="alert alert-info">
+    <i class="ti ti-info-circle"></i>
+    <div>
+      <div class="alert-title">Самостоятельный курс</div>
+      <div class="alert-body">Вы добавляете курс самостоятельно. Если курс назначен врачом — он появится автоматически в вашем списке.</div>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('patient.add_course') }}" id="addCourseForm">
+    <!-- Основные данные -->
+    <div class="card">
+      <div class="card-title">Основные данные</div>
+
+      <div class="form-group">
+        <label class="form-label">Название курса</label>
+        <input class="form-control" type="text" name="title"
+               placeholder="Например: Витамин D, профилактика" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Цель приёма <span style="color:var(--color-text-tertiary)">(необязательно)</span></label>
+        <textarea class="form-control" name="goal"
+                  placeholder="Краткое описание цели курса..."></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата начала</label>
+          <input class="form-control" type="date" name="start_date"
+                 value="{{ today.isoformat() }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дата окончания</label>
+          <input class="form-control" type="date" name="end_date" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- Препараты -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" style="margin-bottom:0">Препараты</div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addMedRow()">
+          <i class="ti ti-plus"></i> Добавить
+        </button>
+      </div>
+
+      <div id="medList"></div>
+
+      <div id="addMedPlaceholder" style="border:0.5px dashed var(--color-border-mid);border-radius:6px;padding:14px;
+           text-align:center;font-size:13px;color:var(--color-text-tertiary);cursor:pointer"
+           onclick="addMedRow()">
+        <i class="ti ti-plus"></i> Добавить препарат
+      </div>
+    </div>
+
+    <!-- Форма нового препарата (появляется динамически) -->
+    <div class="card" id="newMedCard" style="display:none;border:0.5px solid var(--color-info-border);background:#F8FAFF">
+      <div class="card-title" style="color:var(--color-info-text)">Новый препарат</div>
+
+      <div class="form-group">
+        <label class="form-label">Название препарата</label>
+        <div style="position:relative">
+          <input class="form-control" id="medNameInput" type="text"
+                 placeholder="Введите название..." autocomplete="off"
+                 style="background:#EEF2FF;border-color:var(--color-info-border)"
+                 oninput="searchMeds(this.value)">
+          <div id="medSuggest" style="position:absolute;top:100%;left:0;right:0;background:#fff;
+               border:0.5px solid var(--color-info-border);border-radius:6px;z-index:50;display:none"></div>
+        </div>
+        <input type="hidden" id="medIdInput" value="">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дозировка</label>
+          <input class="form-control" id="doseInput" type="number" min="0.1" step="0.1"
+                 placeholder="500" style="background:#EEF2FF;border-color:var(--color-info-border)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Единица</label>
+          <select class="form-control" id="unitSelect"
+                  style="background:#EEF2FF;border-color:var(--color-info-border)">
+            <option value="мг">мг</option>
+            <option value="МЕ">МЕ</option>
+            <option value="мл">мл</option>
+            <option value="г">г</option>
+            <option value="мкг">мкг</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Время приёма</label>
+        <div class="chips" id="timesChips">
+          <div class="chip active" data-time="08:00" onclick="toggleTime(this)">08:00</div>
+          <div class="chip" data-time="12:00" onclick="toggleTime(this)">12:00</div>
+          <div class="chip" data-time="18:00" onclick="toggleTime(this)">18:00</div>
+          <div class="chip" data-time="20:00" onclick="toggleTime(this)">20:00</div>
+          <div class="chip" id="customTimeChip" onclick="addCustomTime()">+ Своё время</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Дни приёма</label>
+        <div class="chips" id="daysChips">
+          <div class="chip active" data-day="mon" onclick="toggleDay(this)">Пн</div>
+          <div class="chip active" data-day="tue" onclick="toggleDay(this)">Вт</div>
+          <div class="chip active" data-day="wed" onclick="toggleDay(this)">Ср</div>
+          <div class="chip active" data-day="thu" onclick="toggleDay(this)">Чт</div>
+          <div class="chip active" data-day="fri" onclick="toggleDay(this)">Пт</div>
+          <div class="chip" data-day="sat" onclick="toggleDay(this)">Сб</div>
+          <div class="chip" data-day="sun" onclick="toggleDay(this)">Вс</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-primary" style="flex:1" onclick="confirmMed()">
+          <i class="ti ti-check"></i> Добавить препарат
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="cancelMed()">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Скрытые поля препаратов -->
+    <div id="hiddenMedFields"></div>
+
+
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;padding:11px 16px;font-size:14px">
+        Сохранить курс
+      </button>
+      <a href="{{ url_for('patient.dashboard') }}" class="btn btn-secondary" style="padding:11px 16px">
+        Отмена
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var medicines = {{ medicines | tojson }};
+var medCounter = 0;
+var pendingMed = null;
+
+function addMedRow() {
+  document.getElementById('newMedCard').style.display = 'block';
+  document.getElementById('addMedPlaceholder').style.display = 'none';
+  document.getElementById('medNameInput').focus();
+}
+
+function cancelMed() {
+  document.getElementById('newMedCard').style.display = 'none';
+  document.getElementById('addMedPlaceholder').style.display = 'block';
+  resetMedForm();
+}
+
+function resetMedForm() {
+  document.getElementById('medNameInput').value = '';
+  document.getElementById('medIdInput').value = '';
+  document.getElementById('doseInput').value = '';
+  document.querySelectorAll('#timesChips .chip[data-time]').forEach(c => {
+    c.classList.toggle('active', c.dataset.time === '08:00');
+  });
+  document.querySelectorAll('#daysChips .chip[data-day]').forEach(c => {
+    c.classList.toggle('active', ['mon','tue','wed','thu','fri'].includes(c.dataset.day));
+  });
+}
+
+function toggleTime(el) { el.classList.toggle('active'); }
+function toggleDay(el)  { el.classList.toggle('active'); }
+
+function addCustomTime() {
+  var t = prompt('Введите время (HH:MM):');
+  if (!t || !/^\d{1,2}:\d{2}$/.test(t)) return;
+  var chip = document.createElement('div');
+  chip.className = 'chip active';
+  chip.dataset.time = t;
+  chip.textContent = t;
+  chip.onclick = function() { chip.classList.toggle('active'); };
+  document.getElementById('customTimeChip').before(chip);
+}
+
+function searchMeds(q) {
+  var box = document.getElementById('medSuggest');
+  if (!q) { box.style.display = 'none'; return; }
+  var filtered = medicines.filter(m => m.name.toLowerCase().includes(q.toLowerCase()));
+  if (!filtered.length) { box.style.display = 'none'; return; }
+  box.innerHTML = filtered.slice(0, 8).map(m =>
+    '<div style="padding:8px 14px;cursor:pointer;font-size:13px;hover:background:#eaf3f9" ' +
+    'onmousedown="selectMed(' + m.id + ',\'' + m.name.replace(/'/g,"\'") + '\')">' +
+    m.name + (m.dosage_form ? ' <span style=\'color:#9c9a92;font-size:11px\'>(' + m.dosage_form + ')</span>' : '') +
+    '</div>'
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selectMed(id, name) {
+  document.getElementById('medNameInput').value = name;
+  document.getElementById('medIdInput').value = id;
+  document.getElementById('medSuggest').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#medSuggest') && !e.target.closest('#medNameInput')) {
+    document.getElementById('medSuggest').style.display = 'none';
+  }
+});
+
+function confirmMed() {
+  var name = document.getElementById('medNameInput').value.trim();
+  if (!name) { alert('Введите название препарата'); return; }
+  var dose = document.getElementById('doseInput').value || '1';
+  var unit = document.getElementById('unitSelect').value;
+  var mid  = document.getElementById('medIdInput').value;
+
+  var times = Array.from(document.querySelectorAll('#timesChips .chip.active[data-time]'))
+                   .map(c => c.dataset.time);
+  var days  = Array.from(document.querySelectorAll('#daysChips .chip.active[data-day]'))
+                   .map(c => c.dataset.day);
+
+  if (!times.length) { alert('Выберите хотя бы одно время приёма'); return; }
+  if (!days.length)  { alert('Выберите хотя бы один день'); return; }
+
+  var idx = medCounter++;
+  var timesJson = JSON.stringify(times);
+  var daysJson  = JSON.stringify(days);
+
+
+  var row = document.createElement('div');
+  row.className = 'med-row';
+  row.id = 'medRow' + idx;
+  row.innerHTML =
+    '<div class="med-name">' + name + '</div>' +
+    '<div class="med-dose">' + dose + ' ' + unit + ' · ' + times.length + '×день</div>' +
+    '<div class="med-time">' + times.join(', ') + '</div>' +
+    '<button type="button" class="btn btn-secondary btn-sm" onclick="removeMed(' + idx + ')">' +
+      '<i class="ti ti-pencil"></i>' +
+    '</button>' +
+    '<button type="button" class="btn btn-secondary btn-sm" onclick="removeMed(' + idx + ')">' +
+      '<i class="ti ti-trash"></i>' +
+    '</button>';
+  document.getElementById('medList').appendChild(row);
+
+
+  var hidden = document.getElementById('hiddenMedFields');
+  hidden.insertAdjacentHTML('beforeend',
+    '<input type="hidden" name="medicine_id[]" id="hid_mid_' + idx + '" value="' + mid + '">' +
+    '<input type="hidden" name="medicine_name[]" id="hid_mn_' + idx + '" value="' + name + '">' +
+    '<input type="hidden" name="dosage[]" id="hid_d_' + idx + '" value="' + dose + '">' +
+    '<input type="hidden" name="unit[]" id="hid_u_' + idx + '" value="' + unit + '">' +
+    '<input type="hidden" name="times[]" id="hid_t_' + idx + '" value=\'' + timesJson + '\'>' +
+    '<input type="hidden" name="days[]" id="hid_dw_' + idx + '" value=\'' + daysJson + '\'>'
+  );
+
+  cancelMed();
+}
+
+function removeMed(idx) {
+  var row = document.getElementById('medRow' + idx);
+  if (row) row.remove();
+  ['hid_mid_','hid_mn_','hid_d_','hid_u_','hid_t_','hid_dw_'].forEach(function(prefix) {
+    var el = document.getElementById(prefix + idx);
+    if (el) el.remove();
+  });
+}
+
+
+(function() {
+  var today = new Date();
+  var d = today.toISOString().split('T')[0];
+  var end = new Date(today);
+  end.setMonth(end.getMonth() + 1);
+  document.querySelector('[name=start_date]').value = d;
+  document.querySelector('[name=end_date]').value = end.toISOString().split('T')[0];
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ patient.full_name }} — МедТрекер{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <!-- Навигация -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="{{ url_for('doctor.dashboard') }}" class="btn btn-secondary btn-sm">
+        <i class="ti ti-arrow-left"></i> Назад к пациентам
+      </a>
+      <span style="font-size:15px;font-weight:600">{{ patient.full_name }} — Курс лечения</span>
+    </div>
+  </div>
+
+  {% for cs in course_stats %}
+  {% set course = cs.course %}
+
+  <!-- Метрики соблюдения -->
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="metric-label">Соблюдение курса</div>
+      <div class="metric-value {{ cs.status_key }}">{{ cs.pct }}%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Статус</div>
+      <div style="margin-top:6px">
+        <span class="tag tag-{{ cs.status_key }}">{{ cs.status_label }}</span>
+      </div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Экспорт</div>
+      <a href="{{ url_for('doctor.export_pdf', course_id=course.id) }}"
+         class="btn btn-secondary btn-sm" style="margin-top:6px">
+        <i class="ti ti-file-type-pdf"></i> PDF
+      </a>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Удалить курс</div>
+      <form method="POST" action="{{ url_for('doctor.delete_course', course_id=course.id) }}"
+            style="margin-top:6px"
+            onsubmit="return confirm('Удалить курс «{{ course.title }}»? Все данные о приёмах будут удалены.')">
+        <button class="btn btn-danger btn-sm" type="submit">
+          <i class="ti ti-trash"></i> Удалить
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Препараты курса -->
+  <div class="card">
+    <div class="card-title">
+      Курс: {{ course.title }} · {{ course.start_date.strftime('%d.%m') }} – {{ course.end_date.strftime('%d.%m.%Y') }}
+    </div>
+    {% for ist in cs.item_stats %}
+    <div class="list-row">
+      <div class="list-row-left">
+        <div class="icon-circle"><i class="ti ti-pill"></i></div>
+        <div>
+          <div class="row-title">{{ ist.item.medicine.name }} {{ ist.item.dosage }} {{ ist.item.unit }}</div>
+          <div class="row-sub">{{ ist.item.get_times_list()|join(' · ') }}</div>
+        </div>
+      </div>
+      <div class="list-row-right">
+        <div>
+          <div class="prog-bar">
+            <div class="prog-fill {{ ist.status_key }}" style="width:{{ ist.pct }}%"></div>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);text-align:right;margin-top:3px">{{ ist.pct }}%</div>
+        </div>
+        <span class="tag tag-{{ ist.status_key }}">
+          {% if ist.pct >= 75 %}Хорошо{% elif ist.pct >= 50 %}Внимание{% else %}Критично{% endif %}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Комментарий к курсу -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" style="margin-bottom:0">Комментарий к курсу</div>
+      {% if course.doctor_comment %}
+      <button class="btn btn-secondary btn-sm" onclick="toggleCommentForm('{{ course.id }}')">
+        <i class="ti ti-pencil"></i> Редактировать
+      </button>
+      {% endif %}
+    </div>
+
+    {% if course.doctor_comment %}
+    <div class="comment-bubble">
+      <i class="ti ti-message-circle"></i>
+      <div>
+        <div class="comment-meta">{{ current_user.full_name }}</div>
+        <div>{{ course.doctor_comment }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <hr class="divider">
+    <form method="POST" action="{{ url_for('doctor.add_comment', course_id=course.id) }}"
+          id="commentForm{{ course.id }}">
+      <div class="form-group">
+        <label class="form-label">{% if course.doctor_comment %}Обновить комментарий{% else %}Новый комментарий{% endif %}</label>
+        <textarea class="form-control" name="comment" rows="3"
+                  placeholder="Введите комментарий для пациента...">{{ course.doctor_comment or '' }}</textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="ti ti-send"></i> Отправить комментарий
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- История приёмов -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" style="margin-bottom:0">История приёмов</div>
+      <a href="{{ url_for('doctor.course_history', course_id=course.id) }}"
+         class="btn btn-secondary btn-sm"><i class="ti ti-history"></i> Полная история</a>
+    </div>
+    <div class="empty-state" style="padding:16px">
+      <p style="font-size:12px;color:var(--color-text-tertiary)">
+        Нажмите «Полная история» для просмотра детальных данных
+      </p>
+    </div>
+  </div>
+
+  {% if not loop.last %}<hr class="divider" style="margin:20px 0">{% endif %}
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <i class="ti ti-clipboard-list"></i>
+      <p>У этого пациента нет назначенных вами курсов</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

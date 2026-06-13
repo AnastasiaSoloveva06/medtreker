@@ -1,0 +1,33 @@
+{% extends "shared/base.html" %}
+{% block title %}Пациенты — МедТрекер{% endblock %}
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header">
+    <div class="page-title">Все пациенты</div>
+    <a href="{{ url_for('doctor.assign_course') }}" class="btn btn-primary">
+      <i class="ti ti-plus"></i> Назначить курс
+    </a>
+  </div>
+  <div class="card">
+    {% if patients %}
+      {% for p in patients %}
+      <div class="list-row">
+        <div class="list-row-left">
+          <div class="icon-circle">{{ p.full_name[:2].upper() }}</div>
+          <div>
+            <div class="row-title">{{ p.full_name }}</div>
+            <div class="row-sub">{{ p.email }}</div>
+          </div>
+        </div>
+        <a href="{{ url_for('doctor.patient_card', patient_id=p.id) }}"
+           class="btn btn-secondary btn-sm">
+          <i class="ti ti-external-link"></i> Открыть
+        </a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><i class="ti ti-users"></i><p>Пациентов нет</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

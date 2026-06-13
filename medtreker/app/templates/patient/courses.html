@@ -1,0 +1,53 @@
+{% extends "shared/base.html" %}
+{% block title %}Мои курсы — МедТрекер{% endblock %}
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header">
+    <div class="page-title">Мои курсы</div>
+    <a href="{{ url_for('patient.add_course') }}" class="btn btn-primary">
+      <i class="ti ti-plus"></i> Добавить курс
+    </a>
+  </div>
+
+  <div class="card">
+    {% if courses %}
+      {% for course in courses %}
+      <div class="list-row">
+        <div class="list-row-left">
+          <div>
+            <div class="row-title">{{ course.title }}</div>
+            <div class="row-sub">
+              {{ course.start_date.strftime('%d.%m.%Y') }} – {{ course.end_date.strftime('%d.%m.%Y') }}
+              {% if course.doctor %}
+                · Врач: {{ course.doctor.full_name }}
+              {% else %}
+                · Самостоятельно
+              {% endif %}
+            </div>
+            {% if course.goal %}
+            <div class="row-sub" style="margin-top:2px;color:var(--color-text-tertiary)">
+              Цель: {{ course.goal }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="list-row-right">
+          <span class="tag tag-{% if course.status == 'active' %}ok{% else %}gray{% endif %}">
+            {% if course.status == 'active' %}Активен{% else %}Завершён{% endif %}
+          </span>
+          <a href="{{ url_for('patient.course_detail', course_id=course.id) }}"
+             class="btn btn-secondary btn-sm">
+            <i class="ti ti-external-link"></i> Открыть
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ti ti-pill"></i>
+        <p>Курсов пока нет. <a href="{{ url_for('patient.add_course') }}">Добавить первый</a></p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

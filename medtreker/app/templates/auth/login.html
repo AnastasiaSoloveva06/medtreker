@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вход — МедТрекер</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+<div class="auth-wrapper">
+  <div style="width:100%;max-width:420px">
+    <div class="auth-logo">
+      <div class="logo-box"><i class="ti ti-pill"></i></div>
+      <div class="auth-title">МедТрекер</div>
+      <div class="auth-sub">Система учёта приёма лекарств</div>
+    </div>
+
+    <div class="auth-card">
+      <div class="tab-switcher">
+        <div class="tab-btn active">Вход</div>
+        <a class="tab-btn" href="{{ url_for('auth.register') }}" style="display:flex;align-items:center;justify-content:center;">Регистрация</a>
+      </div>
+
+      {% if error %}
+      <div class="alert alert-error" style="margin-bottom:14px">
+        <i class="ti ti-alert-circle"></i>
+        <div class="alert-body">{{ error }}</div>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div style="position:relative">
+            <input class="form-control" type="email" name="email"
+                   placeholder="user@example.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Пароль</label>
+          <input class="form-control" type="password" name="password"
+                 placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div style="text-align:right;margin-bottom:16px">
+          <span style="font-size:13px;color:var(--color-text-secondary);cursor:pointer">Забыли пароль?</span>
+        </div>
+        <button class="btn btn-primary btn-full" type="submit">
+          Войти
+        </button>
+      </form>
+
+      <hr class="divider">
+      <p style="text-align:center;font-size:13px;color:var(--color-text-tertiary)">
+        Нет аккаунта?
+        <a href="{{ url_for('auth.register') }}"
+           style="color:var(--color-text-primary);font-weight:600">Зарегистрироваться</a>
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

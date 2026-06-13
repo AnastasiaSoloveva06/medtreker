@@ -1,0 +1,80 @@
+{% extends "shared/base.html" %}
+{% block title %}История приёмов — МедТрекер{% endblock %}
+{% block content %}
+<div class="page-wrapper">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="{{ url_for('doctor.patient_card', patient_id=course.patient_id) }}"
+         class="btn btn-secondary btn-sm"><i class="ti ti-arrow-left"></i> Назад</a>
+      <span style="font-size:15px;font-weight:600">
+        {{ course.patient.full_name }} — {{ course.title }}
+      </span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="{{ url_for('doctor.export_pdf', course_id=course.id) }}"
+         class="btn btn-secondary btn-sm"><i class="ti ti-file-type-pdf"></i> Экспорт PDF</a>
+    </div>
+  </div>
+
+  <!-- Фильтр по периоду -->
+  <div class="card">
+    <form method="GET" style="display:flex;gap:12px;align-items:flex-end">
+      <div class="form-group" style="margin:0;flex:1">
+        <label class="form-label">С</label>
+        <input class="form-control" type="date" name="date_from"
+               value="{{ date_from.isoformat() }}">
+      </div>
+      <div class="form-group" style="margin:0;flex:1">
+        <label class="form-label">По</label>
+        <input class="form-control" type="date" name="date_to"
+               value="{{ date_to.isoformat() }}">
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="ti ti-filter"></i> Применить
+      </button>
+    </form>
+  </div>
+
+  <!-- Список приёмов -->
+  <div class="card">
+    <div class="card-title">
+      Приёмы за период {{ date_from.strftime('%d.%m.%Y') }} – {{ date_to.strftime('%d.%m.%Y') }}
+    </div>
+    {% if logs %}
+      {% for log in logs %}
+      <div class="list-row">
+        <div class="list-row-left">
+          <div class="icon-circle"><i class="ti ti-clock"></i></div>
+          <div>
+            <div class="row-title">
+              {{ log.course_item.medicine.name }} {{ log.course_item.dosage }} {{ log.course_item.unit }}
+            </div>
+            <div class="row-sub">
+              {{ log.scheduled_at.strftime('%d.%m.%Y %H:%M') }}
+              {% if log.taken_at %} → принято в {{ log.taken_at.strftime('%H:%M') }}{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="list-row-right">
+          {% if log.status == 'taken' %}
+            <span class="tag tag-ok">Принято</span>
+            {% if log.course_item.prescription_photo %}
+              <span class="tag tag-info" title="Есть фото рецепта"><i class="ti ti-camera"></i></span>
+            {% endif %}
+          {% elif log.status in ('missed', 'skipped') %}
+            <span class="tag tag-bad">Пропущено</span>
+          {% else %}
+            <span class="tag tag-warn">Ожидает</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ti ti-calendar"></i>
+        <p>Нет записей за выбранный период</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends "shared/base.html" %}
+{% block title %}Дневник приёмов — МедТрекер{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Дневник приёмов</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="{{ url_for('patient.export_pdf', course_id=0) }}" class="btn btn-secondary btn-sm"
+         style="pointer-events:none;opacity:.5">
+        
+      </a>
+    </div>
+  </div>
+
+  <!-- Мини-календарь -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <a href="{{ url_for('patient.diary', date=(selected_date - timedelta(7)).isoformat()) }}"
+         class="btn btn-secondary btn-sm" style="padding:5px 10px">
+        <i class="ti ti-arrow-left"></i>
+      </a>
+      <span style="font-size:14px;font-weight:600">
+        {{ selected_date.strftime('%B %Y') | replace('January','Январь') | replace('February','Февраль') | replace('March','Март') | replace('April','Апрель') | replace('May','Май') | replace('June','Июнь') | replace('July','Июль') | replace('August','Август') | replace('September','Сентябрь') | replace('October','Октябрь') | replace('November','Ноябрь') | replace('December','Декабрь') }}
+      </span>
+      <a href="{{ url_for('patient.diary', date=(selected_date + timedelta(7)).isoformat()) }}"
+         class="btn btn-secondary btn-sm" style="padding:5px 10px">
+        <i class="ti ti-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="mini-cal">
+      {% for day in week_days %}
+      {% set st = week_statuses[day] if week_statuses is defined and day in week_statuses else 'none' %}
+      <a href="{{ url_for('patient.diary', date=day.isoformat()) }}"
+         class="cal-day"
+         style="
+           {% if day == today %}
+             background: var(--color-text-primary); color: #fff; border-color: var(--color-text-primary); font-weight: 600;
+           {% elif day == selected_date %}
+             border-color: var(--color-border-strong); font-weight: 600;
+             {% if st == 'taken' %}background:#C8F0DC; color:#085041;
+             {% elif st == 'missed' %}background:#FAD4D4; color:#791F1F;
+             {% elif st == 'partial' %}background:#FDE8C8; color:#633806;
+             {% elif st == 'pending' %}background:#E8E7E2; color:#5f5e5a;
+             {% else %}background:var(--color-bg-tertiary); color:var(--color-text-primary);
+             {% endif %}
+           {% elif day > today %}
+             border-style: dashed; color: var(--color-text-tertiary);
+           {% else %}
+             {% if st == 'taken' %}background:#E1F5EE; color:#085041; border-color:#86EFAC;
+             {% elif st == 'missed' %}background:#FCEBEB; color:#791F1F; border-color:#FCA5A5;
+             {% elif st == 'partial' %}background:#FAEEDA; color:#633806; border-color:#EF9F27;
+             {% elif st == 'pending' %}background:var(--color-bg-secondary); color:var(--color-text-secondary);
+             {% else %}color:var(--color-text-tertiary);
+             {% endif %}
+           {% endif %}
+         ">
+        <span style="font-size:13px">{{ day.day }}</span>
+        {% if st != 'none' and day != today %}
+        <span style="width:6px;height:6px;border-radius:50%;margin-top:2px;display:block;
+          {% if st == 'taken' %}background:#1D9E75;
+          {% elif st == 'missed' %}background:#E24B4A;
+          {% elif st == 'partial' %}background:#EF9F27;
+          {% elif st == 'pending' %}background:#D3D1C7;
+          {% endif %}
+        "></span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="cal-legend">
+      <div class="cal-legend-item">
+        <div class="cal-legend-dot" style="background:#1D9E75"></div> Принято
+      </div>
+      <div class="cal-legend-item">
+        <div class="cal-legend-dot" style="background:#EF9F27"></div> Частично
+      </div>
+      <div class="cal-legend-item">
+        <div class="cal-legend-dot" style="background:#E24B4A"></div> Пропущено
+      </div>
+      <div class="cal-legend-item">
+        <div class="cal-legend-dot" style="background:#D3D1C7"></div> Ожидает
+      </div>
+    </div>
+  </div>
+
+  <!-- Список приёмов за выбранный день -->
+  <div class="card">
+    <div class="card-title">
+      {{ selected_date.strftime('%d') }}
+      {{ selected_date.strftime('%B') | replace('January','января') | replace('February','февраля') | replace('March','марта') | replace('April','апреля') | replace('May','мая') | replace('June','июня') | replace('July','июля') | replace('August','августа') | replace('September','сентября') | replace('October','октября') | replace('November','ноября') | replace('December','декабря') }}
+      {{ selected_date.year }}
+    </div>
+
+    {% if logs %}
+      {% for log in logs %}
+      <div class="list-row">
+        <div class="list-row-left">
+          <div class="icon-circle"><i class="ti ti-clock"></i></div>
+          <div>
+            <div class="row-title">
+              {{ log.course_item.medicine.name }} {{ log.course_item.dosage }} {{ log.course_item.unit }}
+            </div>
+            <div class="row-sub">
+              Запланировано: {{ log.scheduled_at.strftime('%H:%M') }}
+              {% if log.taken_at %} · Принято: {{ log.taken_at.strftime('%H:%M') }}{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="list-row-right">
+          {% if log.status == 'taken' %}
+            <span class="tag tag-ok">Принято</span>
+          {% elif log.status == 'missed' %}
+            <span class="tag tag-bad">Пропущено</span>
+          {% elif log.status == 'pending' %}
+            <form method="POST" action="{{ url_for('patient.mark_intake', log_id=log.id) }}"
+                  style="display:flex;gap:6px">
+              <input type="hidden" name="next"
+                     value="{{ url_for('patient.diary', date=selected_date.isoformat()) }}">
+              <button type="submit" name="action" value="taken"
+                      class="btn btn-primary btn-sm">
+                <i class="ti ti-check"></i> Принял
+              </button>
+              <button type="submit" name="action" value="skipped"
+                      class="btn btn-secondary btn-sm">Пропустил</button>
+            </form>
+          {% else %}
+            <span class="tag tag-warn">Ожидает</span>
+          {% endif %}
+
+          {% if log.course_item.prescription_photo %}
+            <a href="{{ url_for('patient.view_photo', log_id=log.id) }}" target="_blank"
+               title="Открыть фото рецепта">
+              <div style="width:30px;height:30px;border:0.5px solid #1D9E75;border-radius:6px;
+                          display:flex;align-items:center;justify-content:center;background:#E1F5EE">
+                <i class="ti ti-camera" style="font-size:15px;color:#085041"></i>
+              </div>
+            </a>
+          {% else %}
+            <form method="POST" action="{{ url_for('patient.upload_photo', log_id=log.id) }}"
+                  enctype="multipart/form-data" style="display:inline">
+              <label title="Прикрепить фото рецепта" style="cursor:pointer">
+                <div style="width:30px;height:30px;border:0.5px solid var(--color-border-mid);border-radius:6px;
+                            display:flex;align-items:center;justify-content:center">
+                  <i class="ti ti-camera" style="font-size:15px;color:var(--color-text-tertiary)"></i>
+                </div>
+                <input type="file" name="photo" accept="image/*,.pdf"
+                       style="display:none" onchange="this.form.submit()">
+              </label>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ti ti-calendar"></i>
+        <p>На этот день приёмов не запланировано</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Экспорт переменных для JS
+window._diaryDate = '{{ selected_date.isoformat() }}';
+</script>
+{% endblock %}

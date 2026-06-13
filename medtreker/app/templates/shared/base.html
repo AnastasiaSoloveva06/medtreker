@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}МедТрекер{% endblock %}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<nav class="navbar">
+  <a class="navbar-brand" href="{{ url_for('auth.index') }}">
+    <i class="ti ti-pill"></i>
+    МедТрекер
+  </a>
+  <div class="navbar-nav">
+    {% if current_user.is_patient() %}
+      <a class="nav-link {% if request.blueprint == 'patient' and 'dashboard' in request.endpoint %}active{% endif %}"
+         href="{{ url_for('patient.dashboard') }}">Мои курсы</a>
+      <a class="nav-link {% if 'diary' in request.endpoint %}active{% endif %}"
+         href="{{ url_for('patient.diary') }}">Дневник</a>
+      <a class="nav-link {% if 'statistics' in request.endpoint %}active{% endif %}"
+         href="{{ url_for('patient.statistics') }}">Статистика</a>
+    {% else %}
+      <a class="nav-link {% if 'dashboard' in request.endpoint %}active{% endif %}"
+         href="{{ url_for('doctor.dashboard') }}">Пациенты</a>
+      <a class="nav-link {% if 'assign' in request.endpoint %}active{% endif %}"
+         href="{{ url_for('doctor.assign_course') }}">Назначения</a>
+      <a class="nav-link {% if 'statistics' in request.endpoint %}active{% endif %}"
+         href="{{ url_for('doctor.statistics') }}">Статистика</a>
+    {% endif %}
+    <div style="position:relative">
+      <a class="avatar-btn" href="{{ url_for('auth.logout') }}" title="Выйти из системы">
+        {{ current_user.full_name[:2].upper() }}
+      </a>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
+<div class="flash-container" id="flashContainer">
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <div class="flash-msg flash-{{ category }}" onclick="this.remove()">
+    <i class="ti ti-{% if category == 'success' %}check{% elif category == 'error' %}alert-circle{% else %}info-circle{% endif %}"></i>
+    <span>{{ message }}</span>
+  </div>
+  {% endfor %}
+{% endwith %}
+</div>
+
+<div id="pageContent">
+{% block content %}{% endblock %}
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

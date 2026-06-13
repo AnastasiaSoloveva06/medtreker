@@ -1,0 +1,103 @@
+{% extends "shared/base.html" %}
+{% block title %}Мои пациенты — МедТрекер{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Мои пациенты</div>
+      <div class="page-subtitle">{{ current_user.full_name }} · Терапевт</div>
+    </div>
+    <a href="{{ url_for('doctor.assign_course') }}" class="btn btn-primary">
+      <i class="ti ti-plus"></i> Назначить курс
+    </a>
+  </div>
+
+  <!-- Метрики -->
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="metric-label">Всего пациентов</div>
+      <div class="metric-value">{{ total_patients }}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Активных курсов</div>
+      <div class="metric-value">{{ active_courses_count }}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Низкое соблюдение</div>
+      <div class="metric-value {% if low_compliance > 0 %}bad{% endif %}">{{ low_compliance }}</div>
+    </div>
+  </div>
+
+  <!-- Список пациентов -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" style="margin-bottom:0">Список пациентов</div>
+      <div style="display:flex;gap:8px">
+        <div class="search-field">
+          <i class="ti ti-search"></i>
+          <input type="text" placeholder="Поиск" id="searchInput" oninput="filterRows(this.value)">
+        </div>
+      </div>
+    </div>
+
+    {% if patient_stats %}
+      {% for ps in patient_stats %}
+      <div class="list-row patient-row" data-name="{{ ps.patient.full_name | lower }}">
+        <div class="list-row-left">
+          <div class="icon-circle">{{ ps.patient.full_name[:2].upper() }}</div>
+          <div>
+            <div class="row-title">{{ ps.patient.full_name }}</div>
+            <div class="row-sub">
+              Курс: {{ ps.course.title }} · до {{ ps.course.end_date.strftime('%d.%m.%Y') }}
+            </div>
+          </div>
+        </div>
+        <div class="list-row-right">
+          <div>
+            <div class="prog-bar">
+              <div class="prog-fill {{ ps.status_key }}" style="width:{{ ps.pct }}%"></div>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-secondary);text-align:right;margin-top:3px">
+              {{ ps.pct }}%
+            </div>
+          </div>
+          <span class="tag tag-{{ ps.status_key }}">{{ ps.status_label }}</span>
+
+          <!-- Кнопка комментарий -->
+          <a href="{{ url_for('doctor.patient_card', patient_id=ps.patient.id) }}"
+             class="btn-comment {% if ps.has_comment %}has-comment{% endif %}
+                                {% if ps.status_key == 'bad' and not ps.has_comment %}critical{% endif %}">
+            {% if ps.has_comment %}<div class="comment-dot"></div>{% endif %}
+            <i class="ti ti-{% if ps.status_key == 'bad' and not ps.has_comment %}message-circle-plus{% else %}message-circle{% endif %}"></i>
+            Комментарий
+          </a>
+
+          <a href="{{ url_for('doctor.patient_card', patient_id=ps.patient.id) }}"
+             class="btn btn-secondary btn-sm">
+            <i class="ti ti-external-link"></i> Открыть
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ti ti-users"></i>
+        <p>Пациентов пока нет. <a href="{{ url_for('doctor.assign_course') }}">Назначьте первый курс</a></p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterRows(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.patient-row').forEach(function(row) {
+    row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "shared/base.html" %}
+{% block title %}Дашборд — МедТрекер{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Добрый день, {{ current_user.full_name.split()[1] if current_user.full_name.split()|length > 1 else current_user.full_name }}</div>
+      <div class="page-subtitle">{{ today.strftime('%A, %d %B %Y') | replace('Monday','Понедельник') | replace('Tuesday','Вторник') | replace('Wednesday','Среда') | replace('Thursday','Четверг') | replace('Friday','Пятница') | replace('Saturday','Суббота') | replace('Sunday','Воскресенье') | replace('January','января') | replace('February','февраля') | replace('March','марта') | replace('April','апреля') | replace('May','мая') | replace('June','июня') | replace('July','июля') | replace('August','августа') | replace('September','сентября') | replace('October','октября') | replace('November','ноября') | replace('December','декабря') }}</div>
+    </div>
+    <a href="{{ url_for('patient.add_course') }}" class="btn btn-primary">
+      <i class="ti ti-plus"></i> Добавить курс
+    </a>
+  </div>
+
+  <!-- Конфликты времени приёма -->
+  {% for conflict in conflicts %}
+  <div class="alert alert-warn">
+    <i class="ti ti-alert-triangle"></i>
+    <div>
+      <div class="alert-title">Конфликт времени приёма</div>
+      <div class="alert-body">{{ conflict.names }} — оба назначены на {{ conflict.time }}</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Метрики -->
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="metric-label">Соблюдение курса</div>
+      <div class="metric-value {% if compliance >= 75 %}ok{% elif compliance >= 50 %}warn{% else %}bad{% endif %}">
+        {{ compliance }}%
+      </div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Активных курсов</div>
+      <div class="metric-value">{{ active_count }}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Пропусков сегодня</div>
+      <div class="metric-value {% if missed_today > 0 %}bad{% endif %}">{{ missed_today }}</div>
+    </div>
+  </div>
+
+  <!-- Приёмы на сегодня -->
+  <div class="card">
+    <div class="card-title">Приёмы на сегодня</div>
+    {% if today_logs %}
+      {% for log in today_logs %}
+      <div class="list-row">
+        <div class="list-row-left">
+          <div class="icon-circle">
+            <i class="ti ti-clock"></i>
+          </div>
+          <div>
+            <div class="row-title">
+              {{ log.course_item.medicine.name }} {{ log.course_item.dosage }} {{ log.course_item.unit }}
+            </div>
+            <div class="row-sub">
+              {{ log.scheduled_at.strftime('%H:%M') }} · Курс: {{ log.course_item.course.title }}
+            </div>
+          </div>
+        </div>
+        <div class="list-row-right">
+          {% if log.status == 'taken' %}
+            <span class="tag tag-ok">Принято</span>
+          {% elif log.status == 'missed' %}
+            <span class="tag tag-bad">Пропущено</span>
+          {% elif log.status == 'pending' %}
+            <span class="tag tag-warn">Ожидает</span>
+            <form method="POST" action="{{ url_for('patient.mark_intake', log_id=log.id) }}">
+              <input type="hidden" name="action" value="taken">
+              <input type="hidden" name="next" value="{{ url_for('patient.dashboard') }}">
+              <button class="btn btn-primary btn-sm" type="submit">Отметить</button>
+            </form>
+          {% else %}
+            <span class="tag tag-gray">Пропущено</span>
+          {% endif %}
+
+          {% if log.course_item.prescription_photo %}
+            <a href="{{ url_for('patient.view_photo', log_id=log.id) }}" target="_blank"
+               title="Открыть фото рецепта">
+              <div style="width:30px;height:30px;border:0.5px solid #1D9E75;border-radius:6px;
+                          display:flex;align-items:center;justify-content:center;background:#E1F5EE">
+                <i class="ti ti-camera" style="font-size:15px;color:#085041"></i>
+              </div>
+            </a>
+          {% else %}
+            <form method="POST" action="{{ url_for('patient.upload_photo', log_id=log.id) }}"
+                  enctype="multipart/form-data" style="display:inline">
+              <label title="Прикрепить фото рецепта" style="cursor:pointer">
+                <div style="width:30px;height:30px;border:0.5px solid var(--color-border-mid);
+                            border-radius:6px;display:flex;align-items:center;justify-content:center">
+                  <i class="ti ti-camera" style="font-size:15px;color:var(--color-text-tertiary)"></i>
+                </div>
+                <input type="file" name="photo" accept="image/*,.pdf"
+                       style="display:none" onchange="this.form.submit()">
+              </label>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ti ti-calendar-check"></i>
+        <p>На сегодня приёмов не запланировано</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Мои курсы -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" style="margin-bottom:0">Мои курсы</div>
+      {% if courses %}
+      <a href="{{ url_for('patient.export_pdf', course_id=courses[0].id) }}"
+         class="btn btn-secondary btn-sm">
+        <i class="ti ti-file-type-pdf"></i> Экспорт PDF
+      </a>
+      {% else %}
+      <span class="btn btn-secondary btn-sm" style="opacity:.4;pointer-events:none">
+        <i class="ti ti-file-type-pdf"></i> Экспорт PDF
+      </span>
+      {% endif %}
+    </div>
+    {% if courses %}
+      {% for course in courses %}
+      <div class="list-row">
+        <div class="list-row-left">
+          <div>
+            <div class="row-title">{{ course.title }}</div>
+            <div class="row-sub">
+              {{ course.start_date.strftime('%d.%m') }} – {{ course.end_date.strftime('%d.%m.%Y') }}
+              {% if course.doctor %}· Врач: {{ course.doctor.full_name }}{% else %}· Самостоятельно{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="list-row-right">
+          {% if course.doctor_id and course.doctor_comment %}
+          <div style="background:var(--color-info-bg);border:0.5px solid var(--color-info-border);
+                      border-radius:6px;padding:4px 10px;font-size:12px;color:var(--color-info-text);
+                      max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+               title="{{ course.doctor_comment }}">
+            <i class="ti ti-message-circle" style="font-size:13px"></i>
+            Комментарий врача
+          </div>
+          {% elif course.goal %}
+          <div style="background:var(--color-bg-secondary);border:0.5px solid var(--color-border-light);
+                      border-radius:6px;padding:4px 10px;font-size:12px;color:var(--color-text-secondary);
+                      max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+               title="{{ course.goal }}">
+            <i class="ti ti-target" style="font-size:13px"></i>
+            {{ course.goal }}
+          </div>
+          {% endif %}
+          <span class="tag tag-{% if course.status == 'active' %}ok{% else %}gray{% endif %}">
+            {% if course.status == 'active' %}Активен{% else %}Завершён{% endif %}
+          </span>
+          <a href="{{ url_for('patient.course_detail', course_id=course.id) }}"
+             class="btn btn-secondary btn-sm">
+            <i class="ti ti-external-link"></i>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ti ti-pill"></i>
+        <p>Курсов пока нет. <a href="{{ url_for('patient.add_course') }}">Добавить первый</a></p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

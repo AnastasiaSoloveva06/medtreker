@@ -1,0 +1,236 @@
+{% extends "shared/base.html" %}
+{% block title %}Новое назначение — МедТрекер{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <a href="{{ url_for('doctor.dashboard') }}" class="btn btn-secondary btn-sm">
+      <i class="ti ti-arrow-left"></i> Назад к пациентам
+    </a>
+    <span style="font-size:15px;font-weight:600">Новое назначение</span>
+  </div>
+
+  <form method="POST" action="{{ url_for('doctor.assign_course') }}" id="assignForm">
+    <div class="card">
+      <div class="card-title">Основные данные</div>
+
+      <div class="form-group">
+        <label class="form-label">Пациент</label>
+        <select class="form-control" name="patient_id" required>
+          <option value="">Выберите пациента...</option>
+          {% for p in patients %}
+          <option value="{{ p.id }}">{{ p.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Название курса</label>
+        <input class="form-control" type="text" name="title"
+               placeholder="Например: Лечение гипертонии" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата начала</label>
+          <input class="form-control" type="date" name="start_date" required id="startDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дата окончания</label>
+          <input class="form-control" type="date" name="end_date" required id="endDate">
+        </div>
+      </div>
+    </div>
+
+    <!-- Препараты курса -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" style="margin-bottom:0">Препараты курса</div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addDoctorMed()">
+          <i class="ti ti-plus"></i> Добавить
+        </button>
+      </div>
+
+      <div id="docMedList"></div>
+
+      <div id="docAddPlaceholder"
+           style="border:0.5px dashed var(--color-border-mid);border-radius:6px;
+                  padding:14px;text-align:center;font-size:13px;
+                  color:var(--color-text-tertiary);cursor:pointer"
+           onclick="addDoctorMed()">
+        + Добавить препарат
+      </div>
+
+      <!-- Форма добавления препарата -->
+      <div id="docNewMedCard" style="display:none;margin-top:12px;
+           border:0.5px solid var(--color-info-border);border-radius:10px;
+           padding:16px;background:#F8FAFF">
+        <div style="font-size:14px;font-weight:600;color:var(--color-info-text);margin-bottom:12px">
+          Новый препарат
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Название препарата</label>
+          <div style="position:relative">
+            <input class="form-control" id="docMedName" type="text"
+                   placeholder="Введите название..." autocomplete="off"
+                   style="background:#EEF2FF;border-color:var(--color-info-border)"
+                   oninput="searchDocMeds(this.value)">
+            <div id="docMedSuggest" style="position:absolute;top:100%;left:0;right:0;
+                 background:#fff;border:0.5px solid var(--color-info-border);
+                 border-radius:6px;z-index:50;display:none"></div>
+          </div>
+          <input type="hidden" id="docMedId" value="">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Дозировка</label>
+            <input class="form-control" id="docDose" type="number" min="0.1" step="0.1"
+                   style="background:#EEF2FF;border-color:var(--color-info-border)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Единица</label>
+            <select class="form-control" id="docUnit"
+                    style="background:#EEF2FF;border-color:var(--color-info-border)">
+              <option value="мг">мг</option>
+              <option value="МЕ">МЕ</option>
+              <option value="мл">мл</option>
+              <option value="г">г</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Время приёма</label>
+          <div class="chips" id="docTimesChips">
+            <div class="chip active" data-time="08:00" onclick="this.classList.toggle('active')">08:00</div>
+            <div class="chip" data-time="12:00" onclick="this.classList.toggle('active')">12:00</div>
+            <div class="chip" data-time="14:00" onclick="this.classList.toggle('active')">14:00</div>
+            <div class="chip" data-time="20:00" onclick="this.classList.toggle('active')">20:00</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Дни приёма</label>
+          <div class="chips" id="docDaysChips">
+            <div class="chip active" data-day="mon" onclick="this.classList.toggle('active')">Пн</div>
+            <div class="chip active" data-day="tue" onclick="this.classList.toggle('active')">Вт</div>
+            <div class="chip active" data-day="wed" onclick="this.classList.toggle('active')">Ср</div>
+            <div class="chip active" data-day="thu" onclick="this.classList.toggle('active')">Чт</div>
+            <div class="chip active" data-day="fri" onclick="this.classList.toggle('active')">Пт</div>
+            <div class="chip" data-day="sat" onclick="this.classList.toggle('active')">Сб</div>
+            <div class="chip" data-day="sun" onclick="this.classList.toggle('active')">Вс</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-primary" style="flex:1" onclick="confirmDocMed()">
+            <i class="ti ti-check"></i> Добавить препарат
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="cancelDocMed()">Отмена</button>
+        </div>
+      </div>
+
+      <div id="docHiddenFields"></div>
+
+      <button type="submit" class="btn btn-primary btn-full" style="margin-top:16px">
+        Сохранить назначение
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var medicines = {{ medicines | tojson }};
+var docMedCounter = 0;
+
+
+(function() {
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('startDate').value = today;
+  var end = new Date(); end.setMonth(end.getMonth() + 3);
+  document.getElementById('endDate').value = end.toISOString().split('T')[0];
+})();
+
+function addDoctorMed() {
+  document.getElementById('docNewMedCard').style.display = 'block';
+  document.getElementById('docAddPlaceholder').style.display = 'none';
+  document.getElementById('docMedName').focus();
+}
+function cancelDocMed() {
+  document.getElementById('docNewMedCard').style.display = 'none';
+  document.getElementById('docAddPlaceholder').style.display = 'block';
+  document.getElementById('docMedName').value = '';
+  document.getElementById('docMedId').value = '';
+  document.getElementById('docDose').value = '';
+}
+
+function searchDocMeds(q) {
+  var box = document.getElementById('docMedSuggest');
+  if (!q) { box.style.display = 'none'; return; }
+  var filtered = medicines.filter(m => m.name.toLowerCase().includes(q.toLowerCase()));
+  if (!filtered.length) { box.style.display = 'none'; return; }
+  box.innerHTML = filtered.slice(0, 8).map(m =>
+    '<div style="padding:8px 14px;cursor:pointer;font-size:13px" ' +
+    'onmousedown="selectDocMed(' + m.id + ',\'' + m.name.replace(/'/g,"\'") + '\')">' +
+    m.name + '</div>'
+  ).join('');
+  box.style.display = 'block';
+}
+function selectDocMed(id, name) {
+  document.getElementById('docMedName').value = name;
+  document.getElementById('docMedId').value = id;
+  document.getElementById('docMedSuggest').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#docMedSuggest') && !e.target.closest('#docMedName')) {
+    document.getElementById('docMedSuggest').style.display = 'none';
+  }
+});
+
+function confirmDocMed() {
+  var name = document.getElementById('docMedName').value.trim();
+  if (!name) { alert('Введите название препарата'); return; }
+  var dose = document.getElementById('docDose').value || '1';
+  var unit = document.getElementById('docUnit').value;
+  var mid  = document.getElementById('docMedId').value;
+  var times = Array.from(document.querySelectorAll('#docTimesChips .chip.active[data-time]')).map(c => c.dataset.time);
+  var days  = Array.from(document.querySelectorAll('#docDaysChips .chip.active[data-day]')).map(c => c.dataset.day);
+  if (!times.length) { alert('Выберите хотя бы одно время'); return; }
+  if (!days.length)  { alert('Выберите хотя бы один день'); return; }
+  var idx = docMedCounter++;
+
+  var row = document.createElement('div');
+  row.className = 'med-row'; row.id = 'docMedRow' + idx;
+  row.innerHTML =
+    '<div class="med-name">' + name + '</div>' +
+    '<div class="med-dose">' + dose + ' ' + unit + ' · ' + times.length + '×день</div>' +
+    '<div class="med-time">' + times.join(', ') + '</div>' +
+    '<button type="button" class="btn btn-secondary btn-sm" onclick="removeDocMed(' + idx + ')">' +
+      '<i class="ti ti-trash"></i></button>';
+  document.getElementById('docMedList').appendChild(row);
+
+  var h = document.getElementById('docHiddenFields');
+  h.insertAdjacentHTML('beforeend',
+    '<input type="hidden" name="medicine_id[]" id="dh_mid_' + idx + '" value="' + mid + '">' +
+    '<input type="hidden" name="medicine_name[]" id="dh_mn_' + idx + '" value="' + name + '">' +
+    '<input type="hidden" name="dosage[]" id="dh_d_' + idx + '" value="' + dose + '">' +
+    '<input type="hidden" name="unit[]" id="dh_u_' + idx + '" value="' + unit + '">' +
+    '<input type="hidden" name="times[]" id="dh_t_' + idx + '" value=\'' + JSON.stringify(times) + '\'>' +
+    '<input type="hidden" name="days[]" id="dh_dw_' + idx + '" value=\'' + JSON.stringify(days) + '\'>'
+  );
+  cancelDocMed();
+}
+function removeDocMed(idx) {
+  var row = document.getElementById('docMedRow' + idx);
+  if (row) row.remove();
+  ['dh_mid_','dh_mn_','dh_d_','dh_u_','dh_t_','dh_dw_'].forEach(function(p) {
+    var el = document.getElementById(p + idx); if (el) el.remove();
+  });
+}
+</script>
+{% endblock %}
